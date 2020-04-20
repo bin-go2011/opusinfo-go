@@ -17,7 +17,8 @@ var (
 	oggSyncInitProc,
 	oggSyncPageSeekProc,
 	oggSyncBufferProc,
-	oggSyncWroteProc *windows.Proc
+	oggSyncWroteProc,
+	oggPageSerialnoProc *windows.Proc
 )
 
 func init() {
@@ -26,6 +27,7 @@ func init() {
 	oggSyncPageSeekProc = loadedDLL.MustFindProc("ogg_sync_pageseek")
 	oggSyncBufferProc = loadedDLL.MustFindProc("ogg_sync_buffer")
 	oggSyncWroteProc = loadedDLL.MustFindProc("ogg_sync_wrote")
+	oggPageSerialnoProc = loadedDLL.MustFindProc("ogg_page_serialno")
 }
 
 func main() {
@@ -48,10 +50,12 @@ func main() {
 	sliceHeader.Len = int(CHUNK)
 	sliceHeader.Data = buffer
 
-	_, err = file.Read(bytes)
+	n, err := file.Read(bytes)
 	if err != nil {
 		panic(err)
 	}
-	oggSyncWroteProc.Call(uintptr(unsafe.Pointer(&ogsync)), buffer)
-	fmt.Println(bytes)
+	oggSyncWroteProc.Call(uintptr(unsafe.Pointer(&ogsync)), uintptr(n))
+
+	serial, _, _ := oggPageSerialnoProc.Call(uintptr(unsafe.Pointer(&ogsync)), uintptr(unsafe.Pointer(&page)))
+	fmt.Println(serial)
 }
